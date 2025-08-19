@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tap the Dot — Mini Game</title>
+  <style>
+    /* --- Reset & Base --- */
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: #0f172a;
+      background: radial-gradient(1000px 600px at 10% -10%, #a78bfa33, transparent),
+                  radial-gradient(900px 500px at 110% 10%, #34d39933, transparent),
+                  linear-gradient(180deg, #0ea5e9 0%, #1e293b 100%);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    /* --- Card / Layout --- */
+    .card {
+      width: min(900px, 100%);
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 24px;
+      box-shadow: 0 30px 80px rgba(2, 6, 23, 0.35);
+      overflow: hidden;
+      animation: pop 400ms ease;
+    }
+    @keyframes pop { from { transform: scale(.98); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+
+    .header {
+      padding: 20px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06));
+    }
+    .title {
+      font-weight: 800; letter-spacing: .3px; color: #ffffff;
+      text-shadow: 0 1px 0 rgba(0,0,0,.2);
+    }
+    .stats { display: flex; gap: 14px; align-items: center; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 999px; font-weight: 700; font-size: 14px;
+      background: rgba(255,255,255,0.14); color: #fff; border: 1px solid rgba(255,255,255,0.25);
+    }
+    .controls { display: flex; gap: 10px; }
+    .btn {
+      -webkit-tap-highlight-color: transparent;
+      appearance: none; border: 0; cursor: pointer; font-weight: 800; letter-spacing: .3px;
+      padding: 10px 16px; border-radius: 12px; font-size: 14px;
+      background: #22d3ee; color: #0f172a; box-shadow: 0 8px 20px rgba(34, 211, 238, .35);
+      transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(34, 211, 238, .45); }
+    .btn:active { transform: translateY(0); filter: brightness(.95); }
+    .btn.secondary { background: #a78bfa; color: #0b1020; box-shadow: 0 8px 20px rgba(167, 139, 250, .35); }
+
+    /* --- Playfield --- */
+    .arena-wrap { padding: 18px; }
+    .arena {
+      position: relative;
+      width: 100%;
+      height: min(60vh, 450px);
+      min-height: 320px;
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.12));
+      border: 1px dashed rgba(255,255,255,.35);
+      overflow: hidden;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* Decorative grid */
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    .arena::before { content: ""; position: absolute; inset: 0; background-image: radial-gradient(#ffffff30 1px, transparent 1px); background-size: 18px 18px; pointer-events: none; }
+OBOBOBOBOBOBOB
+    /* --- Target (the dot) --- */
+OBOBOBOBOBOBOB    .dot {
+      position: absolute; width: 56px; height: 56px; border-radius: 999px;
+OBOBOBOBOB      display: grid; place-items: center; font-weight: 900;
+      background: conic-gradient(from 180deg, #06b6d4, #22d3ee, #67e8f9, #06b6d4);
+      box-shadow: 0 12px 30px rgba(6,182,212,.5), inset 0 0 0 6px rgba(255,255,255,.6);
+OBOBOBOB      color: #0b1324; transform: translate(-50%, -50%) scale(.95);
+      transition: transform 120ms ease;
+    }
+    .dot:active { transform: translate(-50%, -50%) scale(.9); }
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    .pulse { position: absolute; inset: 0; border-radius: 999px; animation: pulse 1100ms ease-out infinite; border: 2px solid rgba(255,255,255,.7); }
+    @keyframes pulse { from { transform: scale(.9); opacity: .9 } to { transform: scale(1.45); opacity: 0 } }
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB
+    /* --- Toast / Hint --- */
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    .toast {
+OBOB      position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+      background: rgba(255,255,255,.85); color: #0b1324; padding: 10px 14px; border-radius: 999px;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      font-weight: 700; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,.15);
+      opacity: 0; pointer-events: none; transition: opacity .3s ease;
+OBOBOBOB    }
+    .toast.show { opacity: 1; }
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB
+    /* --- Footer --- */
+OBOB    .footer { padding: 12px 18px 20px; color: #e2e8f0; font-size: 12px; text-align: center; opacity: .85; }
+    .footer a { color: inherit; }
+OBOBOBOBOBOBOB
+    /* Responsive tweaks */
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    @media (max-width: 480px) { .btn { font-size: 13px; padding: 10px 14px; } .badge { font-size: 13px; } }
+OAOAOAOAOAOAOAOA  </style>
+</head>
+<body>
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB  <div class="card">
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    <div class="header">
+      <h1 class="title">🎯 Tap the Dot</h1>
+      <div class="stats">
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB        <div class="badge" id="scoreBadge">Score: <span id="score">0</span></div>
+        <div class="badge">Time: <span id="time">30</span>s</div>
+        <div class="badge">Best: <span id="best">0</span></div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="startBtn">Start</button>
+        <button class="btn secondary" id="resetBtn">Reset</button>
+      </div>
+    </div>
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB
+OBOBOB    <div class="arena-wrap">
+OBOBOBOB      <div class="arena" id="arena">
+        <div class="toast" id="toast">Tap the glowing circle as fast as you can!</div>
+        <!-- Dynamic dot will be positioned via JS -->
+OBOBOB        <div class="dot" id="dot" style="left: 50%; top: 50%; display:none;">
+          <div class="pulse"></div>
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB        </div>
+      </div>
+OBOBOBOB    </div>
+
+OB    <div class="footer">
+      Tip: Each hit speeds the dot up a little. Try to set a high score before the timer ends!
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    </div>
+  </div>
+
+  <script>
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    // --- Simple game logic (tiny JS) ---
+OBOBOBOBOBOBOBOB    const arena = document.getElementById('arena');
+OBOBOBOBOBOB    const dot = document.getElementById('dot');
+OBOBOBOB    const scoreEl = document.getElementById('score');
+OBOBOBOBOBOBOBOBOBOBOBOBOB    const timeEl = document.getElementById('time');
+    const bestEl = document.getElementById('best');
+OBOBOBOBOBOBOBOB    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    const toast = document.getElementById('toast');
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB
+    let score = 0;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    let best = Number(localStorage.getItem('tapdot-best') || 0);
+    let timeLeft = 30;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    let gameInterval = null;
+    let timerInterval = null;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    let speedMs = 900; // how often the dot moves
+    let playing = false;
+OBOB
+    bestEl.textContent = best;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB
+    function showToast(msg, ms=1400) {
+      toast.textContent = msg;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), ms);
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    }
+
+OBOBOBOBOBOBOB    function rand(min, max) { return Math.random() * (max - min) + min; }
+
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    function placeDot() {
+      const rect = arena.getBoundingClientRect();
+OBOBOBOBOB      const margin = 40; // keep inside bounds
+      const x = rand(margin, rect.width - margin);
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      const y = rand(margin, rect.height - margin);
+      dot.style.left = x + 'px';
+OBOBOBOBOBOBOB      dot.style.top = y + 'px';
+    }
+OBOBOBOBOBOB
+OBOBOBOBOBOB    function tickMovement() {
+OBOBOBOBOBOBOB      placeDot();
+    }
+OAOAOAOAOAOAOAOAOAOAOAOAOAOAOAOAOAOAOAOA
+    function startGame() {
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      if (playing) return;
+      playing = true;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      score = 0; speedMs = 900; timeLeft = 30;
+OBOBOBOBOBOBOB      scoreEl.textContent = score;
+      timeEl.textContent = timeLeft;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      dot.style.display = 'grid';
+      showToast('Go!');
+
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      placeDot();
+      gameInterval = setInterval(tickMovement, speedMs);
+OBOBOBOB      timerInterval = setInterval(() => {
+        timeLeft--;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB        timeEl.textContent = timeLeft;
+OBOBOBOB        if (timeLeft <= 0) endGame();
+      }, 1000);
+    }
+
+OBOBOBOBOBOBOBOB    function endGame() {
+OBOBOBOBOBOB      playing = false;
+OBOBOBOBOBOB      clearInterval(gameInterval); gameInterval = null;
+OBOBOBOBOBOB      clearInterval(timerInterval); timerInterval = null;
+OBOBOBOB      dot.style.display = 'none';
+OBOBOBOBOB      if (score > best) {
+        best = score; localStorage.setItem('tapdot-best', String(best));
+OBOBOBOBOB        bestEl.textContent = best;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB        showToast('🎉 New High Score: ' + best + '!');
+      } else {
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB        showToast('Time\'s up! Score: ' + score);
+      }
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    }
+
+OBOBOB    function resetGame() {
+      if (gameInterval) clearInterval(gameInterval);
+      if (timerInterval) clearInterval(timerInterval);
+      playing = false; score = 0; timeLeft = 30; speedMs = 900;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      scoreEl.textContent = '0'; timeEl.textContent = '30';
+OBOBOBOB      dot.style.display = 'none';
+OBOBOBOBOBOBOBOBOBOBOBOBOB      showToast('Reset ✔');
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB    }
+
+OBOBOB    // Click handlers
+    dot.addEventListener('click', (e) => {
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      if (!playing) return;
+      e.stopPropagation();
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      score++;
+      scoreEl.textContent = score;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB
+      // Speed up slightly and restart movement timer at new speed
+      speedMs = Math.max(280, speedMs - 30);
+OBOBOBOBOB      clearInterval(gameInterval);
+OBOBOB      gameInterval = setInterval(tickMovement, speedMs);
+OBOBOBOB
+      // instant relocate on hit for snappy feel
+OBOBOBOBOBOBOBOBOBOBOBOB      placeDot();
+OBOBOBOB    });
+
+OBOBOBOBOBOBOBOBOBOB    arena.addEventListener('click', () => {
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      if (!playing) return;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      // Missed click feedback
+      score = Math.max(0, score - 1);
+      scoreEl.textContent = score;
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB      showToast('Miss −1');
+    });
+OBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOBOB
+OBOBOBOBOB    startBtn.addEventListener('click', startGame);
+    resetBtn.addEventListener('click', resetGame);
+
+OBOBOB    // Initial hint
+    setTimeout(() => showToast('Tap the glowing circle as fast as you can!'), 500);
+    window.addEventListener('resize', () => playing && placeDot());
+  </script>
+OBOB</body>
+</html>
+
